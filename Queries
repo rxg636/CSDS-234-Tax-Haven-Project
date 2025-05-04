@@ -1,0 +1,98 @@
+Finds companies registered in a jurisdiction that are owned by officers from another country.
+This is a strong red flag of tax haven use.
+Identifies jurisdictions disproportionately used by foreign nationals, suggesting tax sheltering or avoidance behavior.
+
+MATCH (o:Officer)-[:officer_of]->(e:Entity)
+WHERE o.countries IS NOT NULL AND e.jurisdiction_description IS NOT NULL 
+  AND o.countries <> e.jurisdiction_description
+RETURN e.jurisdiction_description AS jurisdiction, COUNT(DISTINCT e) AS foreign_owned_companies
+ORDER BY foreign_owned_companies DESC
+
+
+
+Ranks the intermediaries who help set up offshore companies by how many companies they’ve handled.
+Highlights key enablers of the offshore system.
+Investigating these firms helps understand the networks driving entity creation in tax havens.
+
+MATCH (i:Intermediary)-[:intermediary_of]->(e:Entity)
+RETURN i.name AS intermediary, COUNT(e) AS num_companies
+ORDER BY num_companies DESC
+LIMIT 20
+
+
+
+Finds individuals linked to a large number of companies.
+Flags nominee directors or shell agents who front for many entities — common in tax avoidance and fraud schemes.
+
+MATCH (o:Officer)-[:officer_of]->(e:Entity)
+RETURN o.name AS officer, COUNT(e) AS num_companies
+ORDER BY num_companies DESC
+LIMIT 20
+
+
+
+Extracts how many companies were incorporated per year, using year values.
+Identifies spikes in offshore activity (e.g., surges around deregulation or new tax loopholes).
+Shows temporal tracking of behavior over decades.
+
+MATCH (e:Entity)
+WHERE e.incorporation_date IS NOT NULL
+WITH split(e.incorporation_date, "-") AS parts
+WITH CASE 
+  WHEN size(parts) = 3 THEN parts[2]
+  ELSE NULL
+END AS year
+WHERE year IS NOT NULL AND toInteger(year) >= 1900 AND toInteger(year) <= 2024
+RETURN year, COUNT(*) AS num_incorporated
+ORDER BY year
+
+
+
+Measures how many companies shut down each year.
+Reveals abnormal shutdown waves (e.g., government crackdowns or panic events).
+Useful to detect critical time points in the offshore entity lifecycle.
+
+MATCH (e:Entity)
+WHERE e.inactivation_date IS NOT NULL
+WITH split(e.inactivation_date, "-") AS parts
+WITH CASE 
+  WHEN size(parts) = 3 THEN parts[2]
+  ELSE NULL
+END AS year
+WHERE year IS NOT NULL AND toInteger(year) >= 1900 AND toInteger(year) <= 2024
+RETURN year, COUNT(*) AS num_closed
+ORDER BY year
+
+
+
+Shows which individual officers control 10+ companies.
+Identifies potential shell networks or front men.
+Shows hubs of entity creation that could be part of fraud or laundering structures.
+
+MATCH (o:Officer)-[:officer_of]->(e:Entity)
+WHERE e.name IS NOT NULL
+WITH o.name AS officer, COLLECT(e.name) AS companies
+WHERE SIZE(companies) > 10
+RETURN officer, SIZE(companies) AS num_companies, companies
+ORDER BY num_companies DESC
+LIMIT 10
+
+
+
+Show what comapanies are currently marked as active
+Have a non-empty inactivation_date (meaning they were shut down at some point)
+The result is a list of entities that appear to have been closed and later reactivated — either legitimately or suspiciously.
+In real-world offshore finance, reactivating dormant or previously closed shell companies is a known tactic for:
+Evading oversight
+Moving assets quietly
+Reusing old shells to avoid new regulatory scrutiny
+These companies may have brief closure periods, or may have been inactive during investigations, and then reappear active
+
+MATCH (e:Entity)
+WHERE toLower(e.status) = "active"
+  AND e.inactivation_date IS NOT NULL
+  AND e.inactivation_date <> ""
+  AND e.name IS NOT NULL
+RETURN e.name, e.jurisdiction_description, e.inactivation_date
+LIMIT 20
+
