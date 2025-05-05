@@ -77,6 +77,15 @@ RETURN officer, SIZE(companies) AS num_companies, companies
 ORDER BY num_companies DESC
 LIMIT 10
 
+Shows a subset of the data showing a graph of officers cooonected to more than 5+ companies at the british Islands
+MATCH (o:Officer)-[:officer_of]->(e:Entity)
+WHERE e.jurisdiction_description = "British Virgin Islands"
+  AND e.name IS NOT NULL
+WITH o, COLLECT(e)[..5] AS companies  // limit to 5 companies per officer
+WHERE SIZE(companies) > 4
+UNWIND companies AS company
+RETURN o, company
+
 
 
 Show what comapanies are currently marked as active
