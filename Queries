@@ -29,6 +29,14 @@ RETURN o.name AS officer, COUNT(e) AS num_companies
 ORDER BY num_companies DESC
 LIMIT 20
 
+Shows a graph repsentation for the above query 
+MATCH (o:Officer)-[:officer_of]->(e:Entity)
+WITH o, COLLECT(e) AS companies
+ORDER BY SIZE(companies) DESC
+LIMIT 20
+UNWIND companies AS company
+RETURN o, company
+
 
 
 Extracts how many companies were incorporated per year, using year values.
