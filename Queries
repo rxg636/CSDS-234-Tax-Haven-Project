@@ -87,7 +87,7 @@ LIMIT 10
 
 Shows a subset of the data showing a graph of officers cooonected to more than 5+ companies at the british Islands
 MATCH (o:Officer)-[:officer_of]->(e:Entity)
-WHERE e.jurisdiction_description = "British Virgin Islands"
+WHERE e.jurisdiction_description = "British Virgin Islands"    // This can be changed to focus on speciifc jurisdication.
   AND e.name IS NOT NULL
 WITH o, COLLECT(e)[..5] AS companies  // limit to 5 companies per officer
 WHERE SIZE(companies) > 4
